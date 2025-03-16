@@ -1,7 +1,7 @@
 import { body, param } from 'express-validator';
 const validate = require('./validate');
 
-export const createUser = [
+export const createAdminUserMiddleware = [
     body('email').isString().exists().notEmpty().isEmail().withMessage('Email must be a valid email address'),
     body('firstName').isString().exists().notEmpty().isLength({ min: 3, max: 40 }).withMessage('First name must be between 3 and 40 characters'),
     body('lastName').isString().exists().notEmpty().isLength({ min: 3, max: 40 }).withMessage('Last name must be between 3 and 40 characters'),
@@ -15,7 +15,7 @@ export const requiredIdParam = [
     validate
 ];
 
-export const updateUser = [
+export const updateAdminUserMiddleware = [
     param('id').isUUID(4).exists().withMessage('ID must be a valid UUID'),
     body('email').isString().optional().notEmpty().isEmail().withMessage('Email must be a valid email address'),
     body('firstName').isString().optional().notEmpty().isLength({ min: 3, max: 40 }).withMessage('First name must be between 3 and 40 characters'),
