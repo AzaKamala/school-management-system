@@ -1,4 +1,4 @@
-class AdminUser {
+class AdminUserDTO {
   id: string;
   firstName: string;
   lastName: string;
@@ -25,8 +25,8 @@ class AdminUser {
     this.updatedAt = updatedAt;
   }
 
-  static fromObject(obj: any): AdminUser {
-    return new AdminUser(
+  static fromObject(obj: any): AdminUserDTO {
+    return new AdminUserDTO(
       obj.id,
       obj.firstName,
       obj.lastName,
