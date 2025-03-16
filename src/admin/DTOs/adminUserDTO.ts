@@ -1,4 +1,4 @@
-class AdminUserDTO {
+export default class AdminUserDTO {
   id: string;
   firstName: string;
   lastName: string;

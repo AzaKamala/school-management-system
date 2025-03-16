@@ -2,6 +2,7 @@ import Router from "express";
 import { Request, Response } from 'express';
 import { createAdminUser, deleteAdminUser, getAdminUserByEmail, getAdminUserById, getAdminUsers, updateAdminUser } from "../queries/adminUserQueries";
 import { createAdminUserValidator, requiredIdParam, updateAdminUserValidator } from "../middlewares/adminUserMiddleware";
+import AdminUserDTO from "../DTOs/adminUserDTO";
 
 const router = Router();
 
@@ -29,7 +30,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     try {
         const adminUsers = await getAdminUsers();
 
-        res.status(200).send(adminUsers);
+        res.status(200).send(adminUsers.map(AdminUserDTO.fromObject));
         return;
     } catch(error) {
         console.error(error);
