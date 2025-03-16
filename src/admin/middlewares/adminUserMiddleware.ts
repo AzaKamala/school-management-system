@@ -1,5 +1,5 @@
 import { body, param } from 'express-validator';
-const validate = require('./validate');
+const validate = require('../../common/middlewares/validate');
 
 export const createAdminUserValidator = [
     body('email').isString().exists().notEmpty().isEmail().withMessage('Email must be a valid email address'),
