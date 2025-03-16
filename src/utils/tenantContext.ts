@@ -2,8 +2,11 @@ import { PrismaClient } from '@prisma/client';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getTenantById } from '../admin/queries/tenantQueries';
 
 const prisma = new PrismaClient();
+
+const prismaClients: Record<string, PrismaClient> = {};
 
 export async function createTenantSchema(schemaName: string): Promise<void> {
   console.log(`Initializing schema for tenant: ${schemaName}`);
@@ -39,6 +42,32 @@ export async function createTenantSchema(schemaName: string): Promise<void> {
     console.error(`Error initializing tenant schema ${schemaName}:`, error);
     throw error;
   }
+}
+
+export async function getTenantPrismaClient(tenantId: string): Promise<PrismaClient> {
+  if (prismaClients[tenantId]) {
+    return prismaClients[tenantId];
+  }
+
+  const tenant = await getTenantById(tenantId);
+  if (!tenant) {
+    throw new Error(`Tenant with ID ${tenantId} not found`);
+  }
+
+  if (!tenant.active) {
+    throw new Error(`Tenant ${tenant.name} is not active`);
+  }
+
+  const prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: `${process.env.DATABASE_URL}?currentSchema=${tenant.schemaName}`
+      },
+    },
+  });
+
+  prismaClients[tenantId] = prisma;
+  return prisma;
 }
 
 export default prisma;
