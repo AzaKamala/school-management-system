@@ -60,7 +60,7 @@ export const getAdminUserByEmail = async (email: string) => {
     }
 }
 
-export const updateAdminUser = async (id: string, email?: string, password?: string, firstName?: string, lastName?: string, role?: string) => {
+export const updateAdminUser = async (id: string, email?: string, password?: string, firstName?: string, lastName?: string, role?: string, active?: boolean) => {
     try {
         const data: any = {};
 
@@ -68,6 +68,7 @@ export const updateAdminUser = async (id: string, email?: string, password?: str
         if (lastName) data.lastName = lastName;
         if (email) data.email = email;
         if (role) data.role = role;
+        if (active) data.active = active;
         if (password) {
             data.password = await bcrypt.hash(password, 10);
         }
