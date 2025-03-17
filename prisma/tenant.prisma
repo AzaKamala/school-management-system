@@ -9,13 +9,73 @@ datasource db {
 }
 
 model User {
-  id          String    @id @default(uuid())
-  email       String    @unique
-  password    String?
-  firstName   String
-  lastName    String
-  role        String
-  active      Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String     @id @default(uuid())
+  email         String     @unique
+  password      String?
+  firstName     String
+  lastName      String
+  active        Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  oauthAccounts OAuth[]
+  userRoles     UserRole[]
+  auditLogs     AuditLog[]
+}
+
+model TenantRole {
+  id          String                @id @default(uuid())
+  name        String                @unique
+  description String
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  permissions TenantRolePermission[]
+  users       UserRole[]
+}
+
+model Permission {
+  id          String                 @id @default(uuid())
+  name        String                 @unique
+  description String
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  roles       TenantRolePermission[]
+}
+
+model TenantRolePermission {
+  tenantRoleId String
+  permissionId String
+  tenantRole   TenantRole  @relation(fields: [tenantRoleId], references: [id], onDelete: Cascade)
+  permission   Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([tenantRoleId, permissionId])
+}
+
+model UserRole {
+  userId       String
+  tenantRoleId String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantRole   TenantRole @relation(fields: [tenantRoleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tenantRoleId])
+}
+
+model OAuth {
+  id         String   @id @default(uuid())
+  userId     String
+  provider   String
+  providerId String   @unique
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  status    String
+  ip        String?
+  userAgent String?
+  metadata  String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
