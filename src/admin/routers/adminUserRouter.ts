@@ -14,19 +14,39 @@ import {
   updateAdminUserValidator,
 } from "../middlewares/adminUserMiddleware";
 import AdminUserDTO from "../DTOs/adminUserDTO";
+import { adminPrisma } from "../../utils/tenantContext";
+import {
+  authenticateJWT,
+  requireAdmin,
+  requirePermission,
+} from "../../common/middlewares/authMiddleware";
+import { rateLimitAPI } from "../../common/middlewares/rateLimitMiddleware";
 
 const router = Router();
 
 router.post(
   "/",
+  rateLimitAPI,
+  authenticateJWT,
+  requireAdmin,
+  requirePermission("manage_admin_users"),
   createAdminUserValidator,
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { firstName, lastName, password, email, role } = req.body;
+      const { firstName, lastName, password, email, roleId } = req.body;
 
       const existingAdminUser = await getAdminUserByEmail(email);
       if (existingAdminUser) {
         res.status(400).json({ error: "Email already exists" });
+        return;
+      }
+
+      const role = await adminPrisma.role.findUnique({
+        where: { id: roleId },
+      });
+
+      if (!role) {
+        res.status(400).json({ error: "Invalid role ID" });
         return;
       }
 
@@ -35,33 +55,41 @@ router.post(
         password,
         firstName,
         lastName,
-        role
+        roleId
       );
 
       res.status(201).send(AdminUserDTO.fromObject(adminUser));
-      return;
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Internanl server error!" });
+      res.status(500).json({ error: "Internal server error!" });
     }
   }
 );
 
-router.get("/", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const adminUsers = await getAdminUsers();
+router.get(
+  "/",
+  rateLimitAPI,
+  authenticateJWT,
+  requireAdmin,
+  requirePermission("view_admin_users"),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const adminUsers = await getAdminUsers();
 
-    res.status(200).send(adminUsers.map(AdminUserDTO.fromObject));
-    return;
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error!" });
-    return;
+      res.status(200).send(adminUsers.map(AdminUserDTO.fromObject));
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Internal server error!" });
+    }
   }
-});
+);
 
 router.get(
   "/:id",
+  rateLimitAPI,
+  authenticateJWT,
+  requireAdmin,
+  requirePermission("view_admin_users"),
   requiredIdParam,
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -73,23 +101,25 @@ router.get(
         return;
       }
 
-      res.status(200).send(adminUser);
-      return;
+      res.status(200).send(AdminUserDTO.fromObject(adminUser));
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Internal server error!" });
-      return;
     }
   }
 );
 
 router.put(
   "/:id",
+  rateLimitAPI,
+  authenticateJWT,
+  requireAdmin,
+  requirePermission("manage_admin_users"),
   updateAdminUserValidator,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const { firstName, lastName, password, active, email, role } = req.body;
+      const { firstName, lastName, password, active, email, roleId } = req.body;
 
       const adminUser = await getAdminUserById(id);
       if (!adminUser) {
@@ -108,28 +138,41 @@ router.put(
         }
       }
 
+      if (roleId) {
+        const role = await adminPrisma.role.findUnique({
+          where: { id: roleId },
+        });
+
+        if (!role) {
+          res.status(400).json({ error: "Invalid role ID" });
+          return;
+        }
+      }
+
       const updatedAdminUser = await updateAdminUser(
         id,
         email,
         password,
         firstName,
         lastName,
-        role,
+        roleId,
         active
       );
 
       res.status(200).send(AdminUserDTO.fromObject(updatedAdminUser));
-      return;
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Internal server error!" });
-      return;
     }
   }
 );
 
 router.delete(
   "/:id",
+  rateLimitAPI,
+  authenticateJWT,
+  requireAdmin,
+  requirePermission("manage_admin_users"),
   requiredIdParam,
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -144,11 +187,9 @@ router.delete(
       await deleteAdminUser(id);
 
       res.status(200).json({ message: "Admin user deleted successfully" });
-      return;
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Internal server error!" });
-      return;
     }
   }
 );
