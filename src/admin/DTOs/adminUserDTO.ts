@@ -3,7 +3,9 @@ export default class AdminUserDTO {
   firstName: string;
   lastName: string;
   email: string;
-  role: string;
+  roleId: string | null;
+  roleName: string | null;
+  active: boolean;
   createdAt: Date;
   updatedAt: Date;
 
@@ -12,7 +14,9 @@ export default class AdminUserDTO {
     firstName: string,
     lastName: string,
     email: string,
-    role: string,
+    roleId: string | null,
+    roleName: string | null,
+    active: boolean,
     createdAt: Date,
     updatedAt: Date
   ) {
@@ -20,7 +24,9 @@ export default class AdminUserDTO {
     this.firstName = firstName;
     this.lastName = lastName;
     this.email = email;
-    this.role = role;
+    this.roleId = roleId;
+    this.roleName = roleName;
+    this.active = active;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
@@ -31,7 +37,9 @@ export default class AdminUserDTO {
       obj.firstName,
       obj.lastName,
       obj.email,
-      obj.role,
+      obj.roleId,
+      obj.assignedRole?.name || null,
+      obj.active,
       obj.createdAt,
       obj.updatedAt
     );
