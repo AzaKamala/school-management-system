@@ -1,25 +1,25 @@
 import Router from "express";
 import { Request, Response } from 'express';
-import { createTenant, deleteTenant, getTenantBySchemaName, getTenantById, getTenants, updateTenant } from "../queries/tenantQueries";
+import { createTenant, deleteTenant, getTenantByDatabaseName, getTenantById, getTenants, updateTenant } from "../queries/tenantQueries";
 import { createTenantValidator, requiredIdParam, updateTenantValidator } from "../middlewares/tenantMiddleware";
 import TenantDTO from "../DTOs/tenantDTO";
-import { createTenantSchema } from "../../utils/tenantContext";
+import { createTenantDatabase } from "../../utils/tenantContext";
 
 const router = Router();
 
 router.post('/', createTenantValidator, async (req: Request, res: Response): Promise<void> => {
     try {
-        const { name, schemaName } = req.body;
+        const { name, databaseName } = req.body;
 
-        const existingTenant = await getTenantBySchemaName(schemaName);
+        const existingTenant = await getTenantByDatabaseName(databaseName);
         if (existingTenant) {
-            res.status(400).json({ error: 'Schema name already exists' });
+            res.status(400).json({ error: 'Database name already exists' });
             return;
         }
 
-        await createTenantSchema(schemaName);
+        await createTenantDatabase(databaseName);
         
-        const tenant = await createTenant(name, schemaName);
+        const tenant = await createTenant(name, databaseName);
 
         res.status(201).send(TenantDTO.fromObject(tenant));
         return;

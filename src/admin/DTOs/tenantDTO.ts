@@ -1,7 +1,7 @@
 export default class TenantDTO {
   id: string;
   name: string;
-  schemaName: string;
+  databaseName: string;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -9,14 +9,14 @@ export default class TenantDTO {
   constructor(
     id: string,
     name: string,
-    schemaName: string,
+    databaseName: string,
     active: boolean,
     createdAt: Date,
     updatedAt: Date
   ) {
     this.id = id;
     this.name = name;
-    this.schemaName = schemaName;
+    this.databaseName = databaseName;
     this.active = active;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
@@ -26,7 +26,7 @@ export default class TenantDTO {
     return new TenantDTO(
       obj.id,
       obj.name,
-      obj.schemaName,
+      obj.databaseName,
       obj.active,
       obj.createdAt,
       obj.updatedAt

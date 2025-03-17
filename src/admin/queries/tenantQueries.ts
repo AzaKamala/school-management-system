@@ -1,13 +1,13 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient as AdminPrismaClient } from '@prisma/admin-client';
 
-const prisma = new PrismaClient();
+const prisma = new AdminPrismaClient();
 
-export const createTenant = async (name: string, schemaName: string) => {
+export const createTenant = async (name: string, databaseName: string) => {
   try {
     const newTenant = await prisma.tenant.create({
       data: {
         name,
-        schemaName,
+        databaseName,
       },
     });
 
@@ -41,11 +41,11 @@ export const getTenantById = async (id: string) => {
   }
 };
 
-export const getTenantBySchemaName = async (schemaName: string) => {
+export const getTenantByDatabaseName = async (databaseName: string) => {
   try {
     const tenant = await prisma.tenant.findUnique({
       where: {
-        schemaName,
+        databaseName,
       },
     });
 
@@ -83,7 +83,7 @@ export const deleteTenant = async (id: string) => {
   try {
     const tenant = await prisma.tenant.findUnique({
         where: { id },
-        select: { schemaName: true }
+        select: { databaseName: true }
     });
 
     if (!tenant) throw new Error('Tenant not found');
@@ -94,7 +94,7 @@ export const deleteTenant = async (id: string) => {
       },
     });
 
-    await prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${tenant.schemaName}" CASCADE`);
+    await prisma.$executeRawUnsafe(`DROP DATABASE "${tenant.databaseName}" WITH (FORCE)`);
   } catch (error) {
     throw error;
   }

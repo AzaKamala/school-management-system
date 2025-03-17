@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { getTenantPrismaClient } from '../../utils/tenantContext';
 import { PrismaClient } from '@prisma/client';
+import { v4 as uuidv4 } from 'uuid';
 
 export const createTenantUser = async (
   tenantId: string,
@@ -11,26 +12,21 @@ export const createTenantUser = async (
   role: string
 ) => {
   try {
-    const prisma = await getTenantPrismaClient(tenantId) as PrismaClient & { 
-      user: { 
-        create: Function; 
-        findMany: Function; 
-        findUnique: Function; 
-        update: Function;
-        delete: Function;
-      } 
-    };
+    const prisma = await getTenantPrismaClient(tenantId);
     
     const hashedPassword = await bcrypt.hash(password, 10);
     
+    // Now this is properly typed with the tenant schema
     const user = await prisma.user.create({
       data: {
+        id: uuidv4(),
         email,
         password: hashedPassword,
         firstName,
         lastName,
         role,
-      },
+        active: true
+      }
     });
     
     return user;
@@ -41,17 +37,9 @@ export const createTenantUser = async (
 
 export const getTenantUsers = async (tenantId: string) => {
   try {
-    const prisma = await getTenantPrismaClient(tenantId) as PrismaClient & { 
-      user: { 
-        create: Function; 
-        findMany: Function; 
-        findUnique: Function; 
-        update: Function;
-        delete: Function;
-      } 
-    };
+    const prisma = await getTenantPrismaClient(tenantId);
     
-    const users = await prisma.$queryRaw`SELECT * FROM "User"`;
+    const users = await prisma.user.findMany();
     
     return users;
   } catch (error) {
@@ -61,15 +49,7 @@ export const getTenantUsers = async (tenantId: string) => {
 
 export const getTenantUserById = async (tenantId: string, userId: string) => {
   try {
-    const prisma = await getTenantPrismaClient(tenantId) as PrismaClient & { 
-      user: { 
-        create: Function; 
-        findMany: Function; 
-        findUnique: Function; 
-        update: Function;
-        delete: Function;
-      } 
-    };
+    const prisma = await getTenantPrismaClient(tenantId);
     
     const user = await prisma.user.findUnique({
       where: {
@@ -85,15 +65,7 @@ export const getTenantUserById = async (tenantId: string, userId: string) => {
 
 export const getTenantUserByEmail = async (tenantId: string, email: string) => {
   try {
-    const prisma = await getTenantPrismaClient(tenantId) as PrismaClient & { 
-      user: { 
-        create: Function; 
-        findMany: Function; 
-        findUnique: Function; 
-        update: Function;
-        delete: Function;
-      } 
-    };
+    const prisma = await getTenantPrismaClient(tenantId);
     
     const user = await prisma.user.findUnique({
       where: {
@@ -120,15 +92,7 @@ export const updateTenantUser = async (
   }
 ) => {
   try {
-    const prisma = await getTenantPrismaClient(tenantId) as PrismaClient & { 
-      user: { 
-        create: Function; 
-        findMany: Function; 
-        findUnique: Function; 
-        update: Function;
-        delete: Function;
-      } 
-    };
+    const prisma = await getTenantPrismaClient(tenantId);
     
     const updateData: any = { ...data };
     
@@ -151,15 +115,7 @@ export const updateTenantUser = async (
 
 export const deleteTenantUser = async (tenantId: string, userId: string) => {
   try {
-    const prisma = await getTenantPrismaClient(tenantId) as PrismaClient & { 
-      user: { 
-        create: Function; 
-        findMany: Function; 
-        findUnique: Function; 
-        update: Function;
-        delete: Function;
-      } 
-    };
+    const prisma = await getTenantPrismaClient(tenantId);
     
     await prisma.user.delete({
       where: {

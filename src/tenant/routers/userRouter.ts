@@ -56,7 +56,7 @@ router.get('/', validateTenantId, async (req: Request, res: Response): Promise<v
 
     const users = await getTenantUsers(tenantId);
 
-    res.status(200).json(users);
+    res.status(200).json(users.map(TenantUserDTO.fromObject));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });

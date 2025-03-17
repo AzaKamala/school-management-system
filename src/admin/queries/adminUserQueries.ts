@@ -1,7 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient as AdminPrismaClient } from '@prisma/admin-client';
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+const prisma = new AdminPrismaClient();
 
 export const createAdminUser = async (email: string, password: string, firstName: string, lastName: string, role: string) => {
     try {
