@@ -1,0 +1,1043 @@
+{
+	"info": {
+		"_postman_id": "b116cdf5-6c08-4189-8368-680d7b536ba1",
+		"name": "School Management System API",
+		"description": "Multi-Tenant School Management System API for managing schools, users, and authentication.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "29142108"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const jsonData = pm.response.json();",
+									"if (jsonData.accessToken) {",
+									"    pm.environment.set('access_token', jsonData.accessToken);",
+									"}",
+									"if (jsonData.refreshToken) {",
+									"    pm.environment.set('refresh_token', jsonData.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@schoolsystem.com\",\n    \"password\": \"SuperAdmin123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login as an administrator without tenant access."
+					},
+					"response": []
+				},
+				{
+					"name": "Login (Tenant)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const jsonData = pm.response.json();",
+									"if (jsonData.accessToken) {",
+									"    pm.environment.set('access_token', jsonData.accessToken);",
+									"}",
+									"if (jsonData.refreshToken) {",
+									"    pm.environment.set('refresh_token', jsonData.refreshToken);",
+									"}",
+									"if (jsonData.user && jsonData.user.tenantId) {",
+									"    pm.environment.set('tenant_id', jsonData.user.tenantId);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@email.com\",\n    \"password\": \"TenantAdmin123!\",\n    \"tenantId\": \"{{tenant_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login as a tenant user. Requires a valid tenant ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const jsonData = pm.response.json();",
+									"if (jsonData.accessToken) {",
+									"    pm.environment.set('access_token', jsonData.accessToken);",
+									"}",
+									"if (jsonData.refreshToken) {",
+									"    pm.environment.set('refresh_token', jsonData.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/refresh-token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"refresh-token"
+							]
+						},
+						"description": "Exchange a refresh token for a new access token."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Logout and invalidate the refresh token."
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints including login, token refresh, and logout.",
+			"auth": {
+				"type": "noauth"
+			}
+		},
+		{
+			"name": "OAuth",
+			"item": [
+				{
+					"name": "Google OAuth Redirect",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/oauth/google?tenantId={{tenant_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"oauth",
+								"google"
+							],
+							"query": [
+								{
+									"key": "tenantId",
+									"value": "{{tenant_id}}"
+								}
+							]
+						},
+						"description": "Redirect to Google OAuth. Requires a valid tenant ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Google OAuth Callback",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const jsonData = pm.response.json();",
+									"if (jsonData.accessToken) {",
+									"    pm.environment.set('access_token', jsonData.accessToken);",
+									"}",
+									"if (jsonData.refreshToken) {",
+									"    pm.environment.set('refresh_token', jsonData.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/oauth/google/callback?code=example_auth_code&tenantId={{tenant_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"oauth",
+								"google",
+								"callback"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "example_auth_code",
+									"description": "Authorization code provided by Google"
+								},
+								{
+									"key": "tenantId",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								}
+							]
+						},
+						"description": "Handle Google OAuth callback."
+					},
+					"response": []
+				}
+			],
+			"description": "OAuth authentication endpoints.",
+			"auth": {
+				"type": "noauth"
+			}
+		},
+		{
+			"name": "Admin Users",
+			"item": [
+				{
+					"name": "Get All Admin Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin-user",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin-user"
+							]
+						},
+						"description": "Get a list of all admin users."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Admin User By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin-user/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin-user",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "admin_user_id_here",
+									"description": "Admin User ID"
+								}
+							]
+						},
+						"description": "Get a specific admin user by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Admin User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"newadmin@example.com\",\n    \"firstName\": \"New\",\n    \"lastName\": \"Admin\",\n    \"password\": \"AdminPassword123!\",\n    \"roleId\": \"role_id_here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin-user",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin-user"
+							]
+						},
+						"description": "Create a new admin user."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Admin User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"Updated\",\n    \"lastName\": \"Admin\",\n    \"email\": \"updated@example.com\",\n    \"roleId\": \"role_id_here\",\n    \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin-user/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin-user",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "admin_user_id_here",
+									"description": "Admin User ID"
+								}
+							]
+						},
+						"description": "Update an existing admin user."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Admin User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin-user/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin-user",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "admin_user_id_here",
+									"description": "Admin User ID"
+								}
+							]
+						},
+						"description": "Delete an admin user."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing admin users."
+		},
+		{
+			"name": "Tenants",
+			"item": [
+				{
+					"name": "Get All Tenants",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenant",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant"
+							]
+						},
+						"description": "Get a list of all tenants."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tenant By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenant/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								}
+							]
+						},
+						"description": "Get a specific tenant by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const jsonData = pm.response.json();",
+									"if (jsonData.id) {",
+									"    pm.environment.set('tenant_id', jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"New School\",\n    \"databaseName\": \"tenant_new_school\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tenant",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant"
+							]
+						},
+						"description": "Create a new tenant (school)."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tenant",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated School Name\",\n    \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tenant/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								}
+							]
+						},
+						"description": "Update an existing tenant."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Tenant",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenant/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "tenant_id_here",
+									"description": "Tenant ID"
+								}
+							]
+						},
+						"description": "Delete a tenant."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing tenants (schools)."
+		},
+		{
+			"name": "Tenant Users",
+			"item": [
+				{
+					"name": "Get All Tenant Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenant/:tenantId/user",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":tenantId",
+								"user"
+							],
+							"variable": [
+								{
+									"key": "tenantId",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								}
+							]
+						},
+						"description": "Get all users for a specific tenant."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tenant User By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenant/:tenantId/user/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":tenantId",
+								"user",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "tenantId",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								},
+								{
+									"key": "id",
+									"value": "user_id_here",
+									"description": "User ID"
+								}
+							]
+						},
+						"description": "Get a specific user from a tenant."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Tenant User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"newuser@example.com\",\n    \"password\": \"UserPassword123!\",\n    \"firstName\": \"New\",\n    \"lastName\": \"User\",\n    \"roles\": [\"role_id_here\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tenant/:tenantId/user",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":tenantId",
+								"user"
+							],
+							"variable": [
+								{
+									"key": "tenantId",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								}
+							]
+						},
+						"description": "Create a new user for a tenant."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tenant User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"updated@example.com\",\n    \"firstName\": \"Updated\",\n    \"lastName\": \"User\",\n    \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tenant/:tenantId/user/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":tenantId",
+								"user",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "tenantId",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								},
+								{
+									"key": "id",
+									"value": "user_id_here",
+									"description": "User ID"
+								}
+							]
+						},
+						"description": "Update an existing tenant user."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Tenant User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenant/:tenantId/user/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":tenantId",
+								"user",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "tenantId",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								},
+								{
+									"key": "id",
+									"value": "user_id_here",
+									"description": "User ID"
+								}
+							]
+						},
+						"description": "Delete a tenant user."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Roles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenant/:tenantId/user/:id/roles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":tenantId",
+								"user",
+								":id",
+								"roles"
+							],
+							"variable": [
+								{
+									"key": "tenantId",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								},
+								{
+									"key": "id",
+									"value": "user_id_here",
+									"description": "User ID"
+								}
+							]
+						},
+						"description": "Get roles for a specific tenant user."
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Role to User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"roleId\": \"role_id_here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tenant/:tenantId/user/:id/roles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":tenantId",
+								"user",
+								":id",
+								"roles"
+							],
+							"variable": [
+								{
+									"key": "tenantId",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								},
+								{
+									"key": "id",
+									"value": "user_id_here",
+									"description": "User ID"
+								}
+							]
+						},
+						"description": "Assign a role to a tenant user."
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Role from User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenant/:tenantId/user/:id/roles/:roleId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":tenantId",
+								"user",
+								":id",
+								"roles",
+								":roleId"
+							],
+							"variable": [
+								{
+									"key": "tenantId",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								},
+								{
+									"key": "id",
+									"value": "user_id_here",
+									"description": "User ID"
+								},
+								{
+									"key": "roleId",
+									"value": "role_id_here",
+									"description": "Role ID"
+								}
+							]
+						},
+						"description": "Remove a role from a tenant user."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing users within a tenant."
+		},
+		{
+			"name": "Audit Logs",
+			"item": [
+				{
+					"name": "Get Tenant Audit Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenant/:tenantId/audit?limit=50&offset=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tenant",
+								":tenantId",
+								"audit"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "failure",
+									"description": "Filter by status (success/failure)",
+									"disabled": true
+								},
+								{
+									"key": "action",
+									"value": "login",
+									"description": "Filter by action type",
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": "50",
+									"description": "Number of results to return"
+								},
+								{
+									"key": "offset",
+									"value": "0",
+									"description": "Pagination offset"
+								},
+								{
+									"key": "startDate",
+									"value": "2025-01-01T00:00:00Z",
+									"description": "Filter by start date",
+									"disabled": true
+								},
+								{
+									"key": "endDate",
+									"value": "2025-03-17T00:00:00Z",
+									"description": "Filter by end date",
+									"disabled": true
+								},
+								{
+									"key": "userId",
+									"value": "user_id_here",
+									"description": "Filter by user ID",
+									"disabled": true
+								}
+							],
+							"variable": [
+								{
+									"key": "tenantId",
+									"value": "{{tenant_id}}",
+									"description": "Tenant ID"
+								}
+							]
+						},
+						"description": "Get audit logs for a specific tenant."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Admin Audit Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/audit/admin?limit=50&offset=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"audit",
+								"admin"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "failure",
+									"description": "Filter by status (success/failure)",
+									"disabled": true
+								},
+								{
+									"key": "action",
+									"value": "login",
+									"description": "Filter by action type",
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": "50",
+									"description": "Number of results to return"
+								},
+								{
+									"key": "offset",
+									"value": "0",
+									"description": "Pagination offset"
+								},
+								{
+									"key": "startDate",
+									"value": "2025-01-01T00:00:00Z",
+									"description": "Filter by start date",
+									"disabled": true
+								},
+								{
+									"key": "endDate",
+									"value": "2025-03-17T00:00:00Z",
+									"description": "Filter by end date",
+									"disabled": true
+								},
+								{
+									"key": "userId",
+									"value": "user_id_here",
+									"description": "Filter by user ID",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get admin audit logs (for Super Admins only)."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for retrieving audit logs."
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}
