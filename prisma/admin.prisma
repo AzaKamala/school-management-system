@@ -1,25 +1,21 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/admin-client"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["admin"]
 }
 
-// Admin schema models
-
+// Admin models
 model Tenant {
-  id          String    @id @default(uuid())
-  name        String
-  schemaName  String    @unique
-  active      Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  @@schema("admin")
+  id           String    @id @default(uuid())
+  name         String
+  databaseName String    @unique
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model AdminUser {
@@ -32,6 +28,4 @@ model AdminUser {
   active      Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  
-  @@schema("admin")
 }

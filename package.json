@@ -7,7 +7,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "ts-node src/index.ts",
     "dev": "nodemon --exec ts-node src/index.ts",
-    "init:db": "ts-node scripts/initDatabase.ts"
+    "init:db": "ts-node scripts/initDatabase.ts",
+    "generate:admin": "prisma generate --schema=./prisma/admin.prisma",
+    "generate:tenant": "prisma generate --schema=./prisma/tenant.prisma",
+    "generate": "npm run generate:admin && npm run generate:tenant",
+    "build": "npm run generate && tsc"
   },
   "author": "",
   "license": "ISC",

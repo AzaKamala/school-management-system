@@ -1,12 +1,11 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/tenant-client"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
-  schemas  = ["{{SCHEMA_NAME}}"]
+  url      = env("TENANT_DATABASE_URL")
 }
 
 model User {
@@ -19,6 +18,4 @@ model User {
   active      Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  
-  @@schema("{{SCHEMA_NAME}}")
 }
