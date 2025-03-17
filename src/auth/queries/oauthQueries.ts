@@ -2,6 +2,8 @@ import { getTenantPrismaClient } from "../../utils/tenantContext";
 import { generateAccessToken, generateRefreshToken } from "../../utils/jwt";
 import { getTenantById } from "../../admin/queries/tenantQueries";
 import { v4 as uuidv4 } from "uuid";
+import { publishLoginEvent } from "../../utils/rabbitmq";
+import { Request } from "express";
 
 // This is a mock version of using OAuth with Google. In a real scenario, I would be using a library like passport.js to handle the OAuth.
 // This is just a simple version of what that would look like.
@@ -15,7 +17,11 @@ interface GoogleProfile {
   picture: string;
 }
 
-export async function handleGoogleCallback(code: string, tenantId?: string) {
+export async function handleGoogleCallback(
+  code: string,
+  tenantId?: string,
+  req?: Request
+) {
   try {
     const profile: GoogleProfile = {
       sub: "google-id-123",
@@ -27,12 +33,43 @@ export async function handleGoogleCallback(code: string, tenantId?: string) {
     };
 
     if (!tenantId) {
+      if (req) {
+        await publishLoginEvent({
+          email: profile.email,
+          action: "login",
+          status: "failure",
+          ip: req.ip || req.socket.remoteAddress || "unknown",
+          userAgent: req.headers["user-agent"] || "unknown",
+          timestamp: new Date(),
+          metadata: {
+            method: "oauth",
+            provider: "google",
+            reason: "missing_tenant",
+          },
+        });
+      }
       throw new Error("Tenant ID is required for OAuth login");
     }
 
     const tenant = await getTenantById(tenantId);
 
     if (!tenant || !tenant.active) {
+      if (req) {
+        await publishLoginEvent({
+          email: profile.email,
+          tenantId,
+          action: "login",
+          status: "failure",
+          ip: req.ip || req.socket.remoteAddress || "unknown",
+          userAgent: req.headers["user-agent"] || "unknown",
+          timestamp: new Date(),
+          metadata: {
+            method: "oauth",
+            provider: "google",
+            reason: "invalid_tenant",
+          },
+        });
+      }
       throw new Error("Invalid tenant");
     }
 
@@ -126,6 +163,23 @@ export async function handleGoogleCallback(code: string, tenantId?: string) {
     });
 
     const refreshToken = await generateRefreshToken(user.id, false, tenantId);
+
+    if (req) {
+      await publishLoginEvent({
+        userId: user.id,
+        email: user.email,
+        tenantId,
+        action: "login",
+        status: "success",
+        ip: req.ip || req.socket.remoteAddress || "unknown",
+        userAgent: req.headers["user-agent"] || "unknown",
+        timestamp: new Date(),
+        metadata: {
+          method: "oauth",
+          provider: "google",
+        },
+      });
+    }
 
     return {
       accessToken,

@@ -13,6 +13,7 @@ import { getAdminUserByEmail } from "../../admin/queries/adminUserQueries";
 import { getTenantUserByEmail } from "../../tenant/queries/userQueries";
 import { getTenantById } from "../../admin/queries/tenantQueries";
 import { getTenantPrismaClient, adminPrisma } from "../../utils/tenantContext";
+import { publishLoginEvent } from "../../utils/rabbitmq";
 
 const router = Router();
 const validate = require("../../common/middlewares/validate");
@@ -27,6 +28,32 @@ const loginValidator = [
   validate,
 ];
 
+async function publishLoginAudit(
+  req: Request,
+  success: boolean,
+  userId?: string,
+  tenantId?: string
+) {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const userAgent = req.headers["user-agent"] || "unknown";
+  const email = req.body.email || "unknown";
+
+  await publishLoginEvent({
+    userId,
+    email,
+    tenantId,
+    action: "login",
+    status: success ? "success" : "failure",
+    ip,
+    userAgent,
+    timestamp: new Date(),
+    metadata: {
+      method: "password",
+      ...(tenantId ? { tenantId } : {}),
+    },
+  });
+}
+
 router.post(
   "/login",
   rateLimitLogin,
@@ -36,9 +63,11 @@ router.post(
       const { email, password, tenantId } = req.body;
 
       if (!tenantId) {
+        console.log("here");
         const adminUser = await getAdminUserByEmail(email);
 
         if (!adminUser || !adminUser.active) {
+          await publishLoginAudit(req, false);
           res.status(401).json({ error: "Invalid email or password" });
           return;
         }
@@ -49,6 +78,7 @@ router.post(
         );
 
         if (!passwordMatch) {
+          await publishLoginAudit(req, false, adminUser.id);
           res.status(401).json({ error: "Invalid email or password" });
           return;
         }
@@ -83,6 +113,8 @@ router.post(
 
         const refreshToken = await generateRefreshToken(adminUser.id, true);
 
+        await publishLoginAudit(req, true, adminUser.id);
+
         res.status(200).json({
           accessToken,
           refreshToken,
@@ -106,11 +138,13 @@ router.post(
         const tenantUser = await getTenantUserByEmail(tenantId, email);
 
         if (!tenantUser || !tenantUser.active) {
+          await publishLoginAudit(req, false, undefined, tenantId);
           res.status(401).json({ error: "Invalid email or password" });
           return;
         }
 
         if (!tenantUser.password) {
+          await publishLoginAudit(req, false, tenantUser.id, tenantId);
           res.status(401).json({ error: "Invalid email or password" });
           return;
         }
@@ -121,6 +155,7 @@ router.post(
         );
 
         if (!passwordMatch) {
+          await publishLoginAudit(req, false, tenantUser.id, tenantId);
           res.status(401).json({ error: "Invalid email or password" });
           return;
         }
@@ -159,6 +194,8 @@ router.post(
           tenantId
         );
 
+        await publishLoginAudit(req, true, tenantUser.id, tenantId);
+
         res.status(200).json({
           accessToken,
           refreshToken,
@@ -175,6 +212,13 @@ router.post(
       }
     } catch (error) {
       console.error("Login error:", error);
+
+      try {
+        await publishLoginAudit(req, false);
+      } catch (auditError) {
+        console.error("Failed to publish login audit:", auditError);
+      }
+
       res.status(500).json({ error: "Internal server error" });
       return;
     }
