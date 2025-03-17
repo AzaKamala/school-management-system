@@ -1,73 +1,87 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient as AdminPrismaClient } from '@prisma/admin-client';
+import { PrismaClient as TenantPrismaClient } from '@prisma/tenant-client';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getTenantById } from '../admin/queries/tenantQueries';
 
-const prisma = new PrismaClient();
+// Create a map to cache TenantPrismaClient instances for each tenant
+const tenantClients: Record<string, TenantPrismaClient> = {};
 
-const prismaClients: Record<string, PrismaClient> = {};
+// Main admin database client
+const adminPrisma = new AdminPrismaClient();
 
-export async function createTenantSchema(schemaName: string): Promise<void> {
-  console.log(`Initializing schema for tenant: ${schemaName}`);
+export async function getTenantPrismaClient(tenantId: string): Promise<TenantPrismaClient> {
+    const tenant = await getTenantById(tenantId);
   
-  try {
-    await prisma.$executeRawUnsafe(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
-    
-    const templatePath = path.join(__dirname, '..', '..', 'prisma', 'tenant-template.prisma');
-    let templateContent = fs.readFileSync(templatePath, 'utf8');
-    
-    templateContent = templateContent.replace(/\{\{SCHEMA_NAME\}\}/g, schemaName);
-    
-    const tempDir = path.join(__dirname, '..', '..', 'prisma', 'temp');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
+    if (!tenant) {
+      throw new Error(`Tenant with ID ${tenantId} not found`);
     }
     
-    const tempSchemaPath = path.join(tempDir, `temp-${schemaName}-${Date.now()}.prisma`);
-    fs.writeFileSync(tempSchemaPath, templateContent);
+    if (!tenant.active) {
+      throw new Error(`Tenant ${tenant.name} is not active`);
+    }
     
-    const env = { ...process.env };
+    // Check if we already have a client for this tenant
+    if (tenantClients[tenant.id]) {
+      return tenantClients[tenant.id];
+    }
     
-    console.log(`Pushing schema using ${tempSchemaPath}`);
-    execSync(`npx prisma db push --schema="${tempSchemaPath}" --accept-data-loss`, {
+    // Create a new PrismaClient for this tenant's database
+    const dbUrl = `${process.env.DATABASE_URL?.replace(/\/[^/]+$/, '')}/${tenant.databaseName}`;
+    const tenantPrisma = new TenantPrismaClient({
+      datasources: {
+        db: {
+          url: dbUrl,
+        },
+      },
+    });
+    
+    // Cache the client for future use
+    tenantClients[tenant.id] = tenantPrisma;
+    
+    return tenantPrisma;
+}
+
+export async function createTenantDatabase(databaseName: string): Promise<void> {
+  console.log(`Creating database for tenant: ${databaseName}`);
+  
+  try {
+    // First connect to postgres to create a new database
+    const adminDbUrl = process.env.DATABASE_URL?.replace(/\/[^/]+$/, '/postgres');
+    
+    // Create a temporary client to create the database
+    const tempAdminPrisma = new AdminPrismaClient({
+      datasources: { db: { url: adminDbUrl } }
+    });
+    
+    // Check if database exists
+    const dbExists = await tempAdminPrisma.$queryRaw`
+      SELECT 1 FROM pg_database WHERE datname = ${databaseName}
+    `;
+    
+    if (!Array.isArray(dbExists) || dbExists.length === 0) {
+      // Create the database
+      await tempAdminPrisma.$executeRawUnsafe(`CREATE DATABASE "${databaseName}"`);
+    }
+    
+    await tempAdminPrisma.$disconnect();
+    
+    // Apply schema to the new database
+    const dbUrl = `${process.env.DATABASE_URL?.replace(/\/[^/]+$/, '')}/${databaseName}`;
+    const env = { ...process.env, TENANT_DATABASE_URL: dbUrl };
+    
+    console.log(`Pushing schema to database ${databaseName} using URL: ${dbUrl}`);
+    execSync(`npx prisma db push --schema="./prisma/tenant.prisma"`, {
       stdio: 'inherit',
       env: env
     });
     
-    fs.unlinkSync(tempSchemaPath);
-    
-    console.log(`Successfully initialized schema for tenant: ${schemaName}`);
+    console.log(`Successfully initialized database for tenant: ${databaseName}`);
   } catch (error) {
-    console.error(`Error initializing tenant schema ${schemaName}:`, error);
+    console.error(`Error initializing tenant database ${databaseName}:`, error);
     throw error;
   }
 }
 
-export async function getTenantPrismaClient(tenantId: string): Promise<PrismaClient> {
-  if (prismaClients[tenantId]) {
-    return prismaClients[tenantId];
-  }
-
-  const tenant = await getTenantById(tenantId);
-  if (!tenant) {
-    throw new Error(`Tenant with ID ${tenantId} not found`);
-  }
-
-  if (!tenant.active) {
-    throw new Error(`Tenant ${tenant.name} is not active`);
-  }
-
-  const prisma = new PrismaClient({
-    datasources: {
-      db: {
-        url: `${process.env.DATABASE_URL}?currentSchema=${tenant.schemaName}`
-      },
-    },
-  });
-
-  prismaClients[tenantId] = prisma;
-  return prisma;
-}
-
-export default prisma;
+export { adminPrisma };
