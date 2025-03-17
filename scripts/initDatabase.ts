@@ -1,8 +1,9 @@
 import * as dotenv from 'dotenv';
-import prisma, { createTenantSchema } from '../src/utils/tenantContext';
+import { adminPrisma, createTenantDatabase } from '../src/utils/tenantContext';
 import * as bcrypt from 'bcryptjs';
 import { execSync } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
+import { PrismaClient as TenantPrismaClient } from '@prisma/tenant-client';
 
 dotenv.config();
 
@@ -10,17 +11,14 @@ async function initDatabase() {
   try {
     console.log('Starting database initialization...');
 
-    console.log('Creating admin schema...');
-    await prisma.$executeRawUnsafe(`CREATE SCHEMA IF NOT EXISTS "admin"`);
-
-    console.log('Pushing main Prisma schema...');
+    console.log('Pushing admin Prisma schema...');
     const env = { ...process.env };
-    execSync('npx prisma db push', {
+    execSync('npx prisma db push --schema=./prisma/admin.prisma', {
       stdio: 'inherit',
       env
     });
 
-    const existingAdmin = await prisma.adminUser.findFirst({
+    const existingAdmin = await adminPrisma.adminUser.findFirst({
       where: { role: 'SUPER_ADMIN' }
     });
     
@@ -28,7 +26,7 @@ async function initDatabase() {
       console.log('Creating super admin user...');
       const hashedPassword = await bcrypt.hash('SuperAdmin123!', 10);
       
-      await prisma.adminUser.create({
+      await adminPrisma.adminUser.create({
         data: {
           email: 'admin@schoolsystem.com',
           password: hashedPassword,
@@ -41,74 +39,63 @@ async function initDatabase() {
       console.log('Created super admin user');
     }
     
-    const existingTenants = await prisma.tenant.findMany({
+    const existingTenants = await adminPrisma.tenant.findMany({
       take: 1
     });
     
     if (existingTenants.length === 0) {
       console.log('Creating test tenant...');
       
-      const testSchemaName = 'tenant_test';
+      const testDatabaseName = 'tenant_test';
       
-      await createTenantSchema(testSchemaName);
+      // Create the tenant database
+      await createTenantDatabase(testDatabaseName);
       
-      const testTenant = await prisma.tenant.create({
+      // Register the tenant in admin database
+      const testTenant = await adminPrisma.tenant.create({
         data: {
           name: 'Test School',
-          schemaName: testSchemaName,
+          databaseName: testDatabaseName,
         }
       });
       
-      console.log('Creating demo users in tenant schema...');
+      console.log('Creating demo users in tenant database...');
       
-      const adminPassword = await bcrypt.hash('TenantAdmin123!', 10);
-      const adminId = await createTenantUser(testSchemaName, {
-        id: uuidv4(),
-        email: 'admin@email.com',
-        password: adminPassword,
-        firstName: 'Tenant',
-        lastName: 'Admin',
-        role: 'TENANT_ADMIN'
+      // Connect directly to the tenant database
+      const dbUrl = `${process.env.DATABASE_URL?.replace(/\/[^/]+$/, '')}/${testDatabaseName}`;
+      const tenantPrisma = new TenantPrismaClient({
+        datasources: {
+          db: {
+            url: dbUrl
+          }
+        }
       });
       
-      console.log('Created demo school with users and classes');
+      // Create tenant admin user
+      const adminPassword = await bcrypt.hash('TenantAdmin123!', 10);
+      await tenantPrisma.user.create({
+        data: {
+          id: uuidv4(),
+          email: 'admin@email.com',
+          password: adminPassword,
+          firstName: 'Tenant',
+          lastName: 'Admin',
+          role: 'TENANT_ADMIN',
+          active: true
+        }
+      });
+      
+      await tenantPrisma.$disconnect();
+      
+      console.log('Created demo school with users');
     }
     
     console.log('Database initialization complete!');
   } catch (error) {
     console.error('Error initializing database:', error);
   } finally {
-    await prisma.$disconnect();
+    await adminPrisma.$disconnect();
   }
-}
-
-async function createTenantUser(schemaName: string, user: { 
-  id: string, 
-  email: string, 
-  password: string, 
-  firstName: string, 
-  lastName: string, 
-  role: string 
-}): Promise<string> {
-  const id = user.id;
-  
-  await prisma.$executeRawUnsafe(`
-    INSERT INTO "${schemaName}"."User" (
-      "id", "email", "password", "firstName", "lastName", "role", "active", "createdAt", "updatedAt"
-    ) VALUES (
-      '${id}', 
-      '${user.email}', 
-      '${user.password}', 
-      '${user.firstName}', 
-      '${user.lastName}', 
-      '${user.role}', 
-      true, 
-      NOW(), 
-      NOW()
-    )
-  `);
-  
-  return id;
 }
 
 initDatabase();
