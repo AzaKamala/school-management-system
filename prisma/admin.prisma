@@ -57,6 +57,8 @@ model AdminUser {
   active      Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  AuditLog AuditLog[]
 }
 
 model RefreshToken {
@@ -67,4 +69,16 @@ model RefreshToken {
   expiresAt   DateTime
   revoked     Boolean   @default(false)
   createdAt   DateTime  @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  status    String
+  ip        String?
+  userAgent String?
+  metadata  String?
+  createdAt DateTime @default(now())
+  adminUser AdminUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
